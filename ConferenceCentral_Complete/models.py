@@ -61,6 +61,7 @@ class Conference(ndb.Model):
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
 
+
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
     name            = messages.StringField(1)
@@ -76,9 +77,42 @@ class ConferenceForm(messages.Message):
     websafeKey      = messages.StringField(11)
     organizerDisplayName = messages.StringField(12)
 
+
 class ConferenceForms(messages.Message):
     """ConferenceForms -- multiple Conference outbound form message"""
     items = messages.MessageField(ConferenceForm, 1, repeated=True)
+
+
+class Session(ndb.Model)
+    """Session -- Session object"""
+    name            = ndb.StringProperty(required=True)
+    conferenceID    = ndb.StringProperty()
+    highlights      = ndb.StringProperty()
+    speaker         = ndb.StringProperty()
+    duration        = ndb.IntegerProperty()
+    typeOfSession   = ndb.StringProperty(repeated=True)
+    location        = ndb.StringProperty()
+    date            = ndb.DateProperty()
+    startTime       = ndb.TimeProperty()
+    maxAttendees    = ndb.IntegerProperty()
+    seatsAvailable  = ndb.IntegerProperty()
+
+
+class SessionForm(messages.Message)
+    """Session -- Session form object"""
+    name            = messages.StringField(1)
+    conferenceID    = messages.StringField(2)
+    highlights      = messages.StringField(3)
+    speaker         = messages.StringField(4)
+    duration        = messages.IntegerField(5, variant=messages.Variant.INT32)
+    typeOfSession   = messages.StringField(6, repeated=True)
+    location        = messages.StringField(7)
+    date            = messages.StringField(8)
+    startTime       = messages.StringField(9)
+    maxAttendees    = messages.IntegerField(10, variant=messages.Variant.INT32)
+    seatsAvailable  = messages.IntegerField(11, variant=messages.Variant.INT32)
+    conferenceName  = messages.StringField(12)
+
 
 class TeeShirtSize(messages.Enum):
     """TeeShirtSize -- t-shirt size enumeration value"""
