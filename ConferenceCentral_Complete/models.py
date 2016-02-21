@@ -83,35 +83,43 @@ class ConferenceForms(messages.Message):
     items = messages.MessageField(ConferenceForm, 1, repeated=True)
 
 
-class Session(ndb.Model)
+class Session(ndb.Model):
     """Session -- Session object"""
-    name            = ndb.StringProperty(required=True)
+    sessionName     = ndb.StringProperty(required=True)
     conferenceID    = ndb.StringProperty()
     highlights      = ndb.StringProperty()
-    speaker         = ndb.StringProperty()
-    duration        = ndb.IntegerProperty()
+    speakerLast     = ndb.StringProperty()
+    speakerFirst    = ndb.StringProperty()
+    duration        = ndb.IntegerProperty(repeated=True)
     typeOfSession   = ndb.StringProperty(repeated=True)
     location        = ndb.StringProperty()
-    date            = ndb.DateProperty()
+    sessionDate     = ndb.DateProperty()
     startTime       = ndb.TimeProperty()
-    maxAttendees    = ndb.IntegerProperty()
-    seatsAvailable  = ndb.IntegerProperty()
+    maxRegistered   = ndb.IntegerProperty()
+    spotsAvailable  = ndb.IntegerProperty()
 
 
-class SessionForm(messages.Message)
-    """Session -- Session form object"""
-    name            = messages.StringField(1)
+class SessionForm(messages.Message):
+    """Session -- Session form outbound message"""
+    sessionName     = messages.StringField(1)
     conferenceID    = messages.StringField(2)
     highlights      = messages.StringField(3)
-    speaker         = messages.StringField(4)
-    duration        = messages.IntegerField(5, variant=messages.Variant.INT32)
-    typeOfSession   = messages.StringField(6, repeated=True)
-    location        = messages.StringField(7)
-    date            = messages.StringField(8)
-    startTime       = messages.StringField(9)
-    maxAttendees    = messages.IntegerField(10, variant=messages.Variant.INT32)
-    seatsAvailable  = messages.IntegerField(11, variant=messages.Variant.INT32)
-    conferenceName  = messages.StringField(12)
+    speakerLast     = messages.StringField(4)
+    speakerFirst    = messages.StringField(5)
+    duration        = messages.IntegerField(6, variant=messages.Variant.INT32, repeated=True)
+    typeOfSession   = messages.StringField(7, repeated=True)
+    location        = messages.StringField(8)
+    sessionDate     = messages.StringField(9)
+    startTime       = messages.StringField(10)
+    maxRegistered   = messages.IntegerField(11, variant=messages.Variant.INT32)
+    spotsAvailable  = messages.IntegerField(12, variant=messages.Variant.INT32)
+    websafeSessionKey  = messages.StringField(13)
+    conferenceKey  = messages.StringField(14)
+
+
+class SessionForms(messages.Message):
+    """SessionForms -- multiple Sessions outbound form message"""
+    choices = messages.MessageField(SessionForm, 1, repeated=True)
 
 
 class TeeShirtSize(messages.Enum):
