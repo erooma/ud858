@@ -1,0 +1,35 @@
+Sessions are characterized by the following properties:
+
+Session name (required)
+highlights
+duration (which will be allowed in 15 minute intervals)
+typeOfSession which will be limited to four types; Workshop, Lecture, Symposium, and Keynote.
+date
+start time in 24hr notation
+conference name to which the session belongs
+location (eg, room number)
+maxRegistered (the total number of allowed attendees)
+spotsAvailable (the number of participants already registered for a session)
+speaker (in two parts, both first and last names to improve search capabilities).
+
+Multiple sessions can take place simultaneously in a conference, as there are no current restrictions on time.
+
+Sessions are linked to a conference (as its ancestor) through the conference websafeConferenceKey (or websafeCK), which is required to create the conference. Only the owner of a conference can create the sessions for that conference.
+
+Sessions can be searched by means of conference, conference and speaker (using both first and last names), and session type (across conferences).
+
+A users wishlist can be created (as per instructions). Please note that this does not adjust the session attendees, since it is not a solid registration function per se (future implementation).
+
+Queries
+
+Two additional queries have been added to the progam's features. 
+
+One query is searching for sessions on a particular date (getSessionsByDate). This is conference agnostic.
+
+The second query is searching for sessions in a particular conference that still have availability (getAvailableSessions). This assumes that tickets are required for all sessions, or that each event has limited capacity.
+
+A query looking for all non-workshop sessions before 7 pm is problematic because Google Datastore does not allow for more than one query involving inequality. As a result,a direct query (eg, Types != Workshop and SessionTime < 19:00 can not be implemented).  
+
+In order to solve this query, one needs to first obtain all sessions before 7 pm, and then if Types is limited by a few categories only, one could limit the search further by Types=Lecture, Types=Symposium, etc, adding these queries together and simply not including Workshop.
+
+Or one can obtain all sessions before 7, then obtain all of these sessions whose Type=Workshop, and using code to 'subtract' these entries from the findings without using the database (eg, code-based).

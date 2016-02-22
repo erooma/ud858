@@ -101,6 +101,11 @@ GET_SPEAKER_REQUEST = endpoints.ResourceContainer(
     speakerFirst=messages.StringField(2),
 )
 
+GET_DATE_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    sessionDate=messages.StringField(1),
+)
+
 CONF_POST_REQUEST = endpoints.ResourceContainer(
     ConferenceForm,
     websafeConferenceKey=messages.StringField(1),
@@ -552,6 +557,78 @@ class ConferenceApi(remote.Service):
         conf = sess.key.parent().get()
         # return SessionForm
         return self._copySessionToForm(sess, "")
+
+
+# - - - Session Filters - - - - - - - - - - - - - - - - - - 
+
+
+    @endpoints.method(GET_DATE_REQUEST, SessionForms,
+            path='getSessions/{sessionDate}',
+            http_method='GET', name='getSessionsByDate')
+    def getSessionsByDate(self, request):
+        """Return sessions having a particular date."""
+        # make sure user is authed
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        # create date format
+        if not request.sessionDate:
+            raise endpoints.UnauthorizedException('A date value is required')
+        else: 
+            sessionDate = datetime.strptime(request.sessionDate[:10], "%Y-%m-%d").date()
+
+        # query by date
+        sessions = Session.query()
+        sessions = sessions.filter(Session.sessionDate==sessionDate)
+
+        if not sessions:
+            raise endpoints.NotFoundException(
+                'No sessions found for this date.')
+
+        # return set of SessionForm objects per Session
+        return SessionForms(
+            items=[self._copySessionToForm(sess, "") for sess in sessions]
+        )
+
+
+    @endpoints.method(CONF_GET_REQUEST, SessionForms,
+            path='getAvailableSessions/{websafeConferenceKey}',
+            http_method='GET', name='getAvailableSessions')
+    def getAvailableSessions(self, request):
+        """Return sessions having spots available in a conference."""
+        # make sure user is authed
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        # create ancestor query for all key matches for this conference
+        wsk = request.websafeConferenceKey
+        conf = ndb.Key(urlsafe=wsk).get()
+
+        sessions = Session.query(ancestor=ndb.Key(urlsafe=wsk))
+
+        if not sessions:
+            raise endpoints.NotFoundException(
+                'No sessions found for this conference.')
+
+        # check if available sessions exist
+
+        # query by date
+        sessions = sessions.filter(Session.spotsAvailable > 0)
+
+        if not sessions:
+            raise endpoints.NotFoundException(
+                'No available sessions are found for this conference.')
+
+        # return set of SessionForm objects per Session
+        return SessionForms(
+            items=[self._copySessionToForm(sess, "") for sess in sessions]
+        )
+
+
 
 
 # - - - Session Wishlist - - - - - - - - - - - - - - - - - - 
