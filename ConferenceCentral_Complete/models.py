@@ -86,7 +86,7 @@ class ConferenceForms(messages.Message):
 class Session(ndb.Model):
     """Session -- Session object"""
     sessionName     = ndb.StringProperty(required=True)
-    conferenceID    = ndb.StringProperty()
+    conferenceName  = ndb.StringProperty()
     highlights      = ndb.StringProperty()
     speakerLast     = ndb.StringProperty()
     speakerFirst    = ndb.StringProperty()
@@ -102,7 +102,7 @@ class Session(ndb.Model):
 class SessionForm(messages.Message):
     """Session -- Session form outbound message"""
     sessionName     = messages.StringField(1)
-    conferenceID    = messages.StringField(2)
+    conferenceName   = messages.StringField(2)
     highlights      = messages.StringField(3)
     speakerLast     = messages.StringField(4)
     speakerFirst    = messages.StringField(5)
@@ -114,12 +114,11 @@ class SessionForm(messages.Message):
     maxRegistered   = messages.IntegerField(11, variant=messages.Variant.INT32)
     spotsAvailable  = messages.IntegerField(12, variant=messages.Variant.INT32)
     websafeSessionKey  = messages.StringField(13)
-    conferenceKey  = messages.StringField(14)
 
 
 class SessionForms(messages.Message):
     """SessionForms -- multiple Sessions outbound form message"""
-    choices = messages.MessageField(SessionForm, 1, repeated=True)
+    items = messages.MessageField(SessionForm, 1, repeated=True)
 
 
 class TeeShirtSize(messages.Enum):
