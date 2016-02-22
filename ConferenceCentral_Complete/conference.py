@@ -89,6 +89,18 @@ CONF_GET_REQUEST = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
 )
 
+CONF_GET_TYPE_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    websafeConferenceKey=messages.StringField(1),
+    typeOfSession=messages.StringField(2),
+)
+
+GET_SPEAKER_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    speakerLast=messages.StringField(1),
+    speakerFirst=messages.StringField(2),
+)
+
 CONF_POST_REQUEST = endpoints.ResourceContainer(
     ConferenceForm,
     websafeConferenceKey=messages.StringField(1),
@@ -457,6 +469,66 @@ class ConferenceApi(remote.Service):
             items=[self._copySessionToForm(sess, wsk) for sess in sessions]
         )
 
+
+    @endpoints.method(CONF_GET_TYPE_REQUEST, SessionForms,
+            path='getConferenceSessions/{websafeConferenceKey}/{typeOfSession}',
+            http_method='GET', name='getConferenceSessionsByType')
+    def getConferenceSessionsByType(self, request):
+        """Return sessions of a conference of a particular type."""
+        # make sure user is authed
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        # create ancestor query for all key matches for this conference
+        wsk = request.websafeConferenceKey
+        sessionType = request.typeOfSession
+
+        conf = ndb.Key(urlsafe=wsk).get()
+
+        # query all sessions in this conference of a particular type
+        sessions = Session.query(ancestor=ndb.Key(urlsafe=wsk))
+        sessions = sessions.filter(Session.typeOfSession==sessionType)
+        
+        if not sessions:
+            raise endpoints.NotFoundException(
+                'No sessions found for conference with key: %s and type: %s' % wsk % sessionType)
+        # return set of SessionForm objects per Session
+        return SessionForms(
+            items=[self._copySessionToForm(sess, wsk) for sess in sessions]
+        )
+
+
+    @endpoints.method(GET_SPEAKER_REQUEST, SessionForms,
+            path='getSessions/{speakerLast}/{speakerFirst}',
+            http_method='GET', name='getSessionsBySpeaker')
+    def getSessionsBySpeaker(self, request):
+        """Return sessions having the same speaker across conferences."""
+        # make sure user is authed
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+        user_id = getUserId(user)
+
+        # create ancestor query for all key matches for this conference
+        first = request.speakerFirst
+        last = request.speakerLast
+        fullname = str(first)+" "+str(last)
+
+        # query all sessions by speaker names
+        sessions = Session.query()
+        sessions = sessions.filter(Session.speakerLast==last)
+        sessions = sessions.filter(Session.speakerFirst==first)
+
+        if not sessions:
+            raise endpoints.NotFoundException(
+                'No sessions found for speaker with name: %s' % fullname)
+
+        # return set of SessionForm objects per Session
+        return SessionForms(
+            items=[self._copySessionToForm(sess, "") for sess in sessions]
+        )
 
 
     @endpoints.method(SessionForm, SessionForm,
