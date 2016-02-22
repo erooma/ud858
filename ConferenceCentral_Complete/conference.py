@@ -350,7 +350,7 @@ class ConferenceApi(remote.Service):
 # - - - Session objects - - - - - - - - - - - - - - - - -
 
 
-    def _copySessionToForm(self, sess, conferenceName):
+    def _copySessionToForm(self, sess, websafeCK):
         """Copy relevant fields from Session to SessionForm."""
         ss = SessionForm()
         for field in ss.all_fields():
@@ -361,13 +361,13 @@ class ConferenceApi(remote.Service):
                 if field.name.endswith('Date'):
                     setattr(ss, field.name, str(getattr(sess, field.name)))
                 elif field.name.endswith('Time'):
-                    setattr(ss, field.name, getattr(sess, field.name).strftime("%H:%M"))
+                    setattr(ss, field.name, str(getattr(sess, field.name)))
                 else:
                     setattr(ss, field.name, getattr(sess, field.name))
             elif field.name == "websafeSessionKey":
                 setattr(ss, field.name, sess.key.urlsafe())
-        if conferenceName:
-            setattr(ss, 'conferenceName', conferenceName)
+        if websafeCK:
+            setattr(ss, 'websafeCK', websafeCK)
         ss.check_initialized()
         return ss
 
@@ -383,15 +383,14 @@ class ConferenceApi(remote.Service):
         #need both conference name and session name to add a session
         if not request.sessionName:
             raise endpoints.BadRequestException("Session 'name' field required")
-        if not request.conferenceName:
-            raise endpoints.BadRequestException("Conference 'name' field required")
+        if not request.websafeCK:
+            raise endpoints.BadRequestException("Conference 'web safe key' field required")
 
         # copy SessionForm/ProtoRPC Message into dict
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         del data['websafeSessionKey']
+        del data['websafeCK']
         
-
-
         # add default values for those missing (both data model & outbound 
         # Message)
         for df in SESSDEFAULTS:
@@ -412,22 +411,16 @@ class ConferenceApi(remote.Service):
 
         # check if conf exists given conferenceName
         # get conference; check that it exists
-
-        q = Conference.query()
-        conf = q.filter(Conference.name == data['conferenceName']).get()
+        conf = ndb.Key(urlsafe=request.websafeCK).get()
 
         # only the creator of a conference can populate it with sessions
         if user_id != conf.organizerUserId:
             raise endpoints.ForbiddenException(
                 'Only the owner of the conference can update this session.')
 
-        # an alternative method is to pass the conference websafeKey and
-        # use the following code:
-        # conf = ndb.Key(urlsafe=request.conferenceWSK).get()
-
         if not conf:
            raise endpoints.NotFoundException(
-               'No conference found with name: %s' % request.conferenceName)
+               'No conference found with key: %s' % request.websafeCK)
 
         # create new session key
         s_id = Session.allocate_ids(size=1, parent=conf.key)[0]
@@ -461,13 +454,13 @@ class ConferenceApi(remote.Service):
                 'No sessions found for conference with key: %s' % wsk)
         # return set of SessionForm objects per Session
         return SessionForms(
-            items=[self._copySessionToForm(sess, getattr(conf, 'name')) for sess in sessions]
+            items=[self._copySessionToForm(sess, wsk) for sess in sessions]
         )
 
 
 
     @endpoints.method(SessionForm, SessionForm,
-            path='conference/newSession',
+            path='createNewSession',
             http_method='POST', name='createSession')
     def createSession(self, request):
         """Create new session."""

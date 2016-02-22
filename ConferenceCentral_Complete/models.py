@@ -114,6 +114,7 @@ class SessionForm(messages.Message):
     maxRegistered   = messages.IntegerField(11, variant=messages.Variant.INT32)
     spotsAvailable  = messages.IntegerField(12, variant=messages.Variant.INT32)
     websafeSessionKey  = messages.StringField(13)
+    websafeCK       = messages.StringField(14)
 
 
 class SessionForms(messages.Message):
