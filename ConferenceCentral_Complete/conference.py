@@ -551,7 +551,86 @@ class ConferenceApi(remote.Service):
                 'No session found with key: %s' % request.websafeSessionKey)
         conf = sess.key.parent().get()
         # return SessionForm
-        return self._copySessionToForm(sess, getattr(conf, 'name'))
+        return self._copySessionToForm(sess, "")
+
+
+# - - - Session Wishlist - - - - - - - - - - - - - - - - - - 
+
+
+    @ndb.transactional()
+    def _sessionWishlist(self, request, add=True):
+        """Register or unregister user for selected conference."""
+        retval = None
+        prof = self._getProfileFromUser() # get user Profile
+
+        # check if sess exists given websafeSessionKey
+        wssk = request.websafeSessionKey
+        sess = ndb.Key(urlsafe=wssk).get()
+        if not sess:
+            raise endpoints.NotFoundException(
+                'No session found with key: %s' % wssk)
+
+        # add session
+        if add:
+            # check if session already added, otherwise add
+            if wssk in prof.sessionKeysAdded:
+                raise ConflictException(
+                    "You have already added this session")
+
+            # add session
+            prof.sessionKeysAdded.append(wssk)
+            retval = True
+
+        # remove session
+        else:
+            # check if session already added
+            if wssk in prof.sessionKeysAdded:
+
+                # remove session
+                prof.sessionKeysAdded.remove(wssk)
+                retval = True
+            else:
+                retval = False
+
+        # write things back to the datastore & return
+        prof.put()
+        return BooleanMessage(data=retval)
+
+
+    @endpoints.method(message_types.VoidMessage, SessionForms,
+            path='sessions/wishlist',
+            http_method='GET', name='getSessionsInWishlist')
+    def getSessionsInWishlist(self, request):
+        """Get list of sessions that user has added to their wishlist."""
+        # get user Profile
+        prof = self._getProfileFromUser() 
+
+        # get sessions from user Profile
+        sess_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionKeysAdded]
+        sessions = ndb.get_multi(sess_keys)
+
+        # return set of SessionForm objects per Session
+        return SessionForms(items=[self._copySessionToForm(sess, "")\
+         for sess in sessions]
+        )
+
+
+
+    @endpoints.method(SESS_GET_REQUEST, BooleanMessage,
+            path='wishlist/{websafeSessionKey}',
+            http_method='POST', name='addSessionToWishlist')
+    def addSessionToWishlist(self, request):
+        """Add the selected session to user's wishlist."""
+        return self._sessionWishlist(request)
+
+
+    @endpoints.method(SESS_GET_REQUEST, BooleanMessage,
+            path='wishlist/{websafeSessionKey}',
+            http_method='DELETE', name='deleteSessionInWishlist')
+    def deleteSessionInWishlist(self, request):
+        """Remove the selected session from user's wishlist."""
+        return self._sessionWishlist(request, add=False)
+
 
 
 # - - - Profile objects - - - - - - - - - - - - - - - - - - -
