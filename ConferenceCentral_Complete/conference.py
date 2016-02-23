@@ -51,8 +51,10 @@ from utils import getUserId
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
+SPEAKER_INFORMATION_KEY = "GET_FEATURED_SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -446,6 +448,17 @@ class ConferenceApi(remote.Service):
 
         # create Session & return (modified) SessionForm
         Session(**data).put()
+
+        # add task queue for featuredSpeaker after creating session
+        #if data['speakerLast'] and data['speakerFirst']:
+        
+        taskqueue.add(
+                params={'websafeCK': request.websafeCK,
+                'speakerFirst': data['speakerFirst'],
+                'speakerLast': data['speakerLast']},
+                url='/tasks/get_featured_speaker'
+            )
+
         return request
 
 
@@ -820,6 +833,55 @@ class ConferenceApi(remote.Service):
     def getAnnouncement(self, request):
         """Return Announcement from memcache."""
         return StringMessage(data=memcache.get(MEMCACHE_ANNOUNCEMENTS_KEY) or "")
+
+
+    @endpoints.method(message_types.VoidMessage, StringMessage,
+            path='conference/announcement/put',
+            http_method='PUT', name='putAnnouncement')
+    def putAnnouncement(self, request):
+        """Put Announcement into memcache"""
+        return StringMessage(data=self._cacheAnnouncement())
+
+
+# - - - New Speaker Information - - - - - - - - - - - - - -
+
+    # def _cacheSpeakerInformation(self):
+    #     """Create information & assign to memcache.
+    #     """
+
+    #     # obtain names of sessions having this speaker
+    #     #q = Session.query(ancestor=ndb.Key(urlsafe=websafeCK))
+    #     #q = q.query(Session.speakerFirst == speakerFirst)
+    #     #q = q.query(Session.speakerLast == speakerLast)
+
+    #     #sessions = q.fetch()
+    #     # determine if speaker also at other sessions
+    #     #result = sessions.count()
+    #     result = 2
+
+    #     if (result > 1):
+    #         # If there are other sessions with this speaker,
+    #         # format the information and set it in memcache
+    #         speakerInformation = "THIS IS THE SPEAKER INFORMATION"
+    #         #speakerInformation = INFORMATION_TPL\
+    #         #    % (', '.join(session.sessionName for session in sessions))
+    #         memcache.set(SPEAKER_INFORMATION_KEY, speakerInformation)
+    #     else:
+    #          # If there are no other speaker hosted sessions,
+    #          # delete the memcache information entry
+    #         speakerInformation = ""
+    #         memcache.delete(SPEAKER_INFORMATION_KEY)
+
+    #     return speakerInformation
+
+
+    @endpoints.method(message_types.VoidMessage, StringMessage,
+            path='speaker/information/get',
+            http_method='GET', name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Return speaker information from memcache."""
+        return StringMessage(data=memcache.get(SPEAKER_INFORMATION_KEY) or "")
+
 
 
 # - - - Registration - - - - - - - - - - - - - - - - - - - -
